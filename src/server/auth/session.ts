@@ -1,30 +1,31 @@
 import { cookies } from "next/headers";
-import { jwtVerify, SignJWT } from "jose";
 
 import { AuthError } from "@/server/lib/errors";
+import {
+  CUSTOMER_COOKIE,
+  TRAINER_COOKIE,
+  verifySession,
+  type CustomerSession,
+  type TrainerSession,
+} from "@/server/auth/jwt";
 
 /**
- * Session auth core.
+ * Cookie-bound session helpers (route-handler side only).
  *
- * The sign/verify *core* takes the secret as a plain string argument so it stays
- * Edge-safe and unit-testable and does NOT import env.ts (CLAUDE.md rule 10).
- * Only the cookie getter/setter helpers (which run in route handlers) read
- * `process.env.JWT_SECRET` and use `next/headers`.
+ * This module uses `next/headers` and so must NOT be imported from the Edge
+ * middleware — import the pure crypto core from `@/server/auth/jwt` there
+ * instead (CLAUDE.md rule 10). The core is re-exported below for convenience so
+ * existing `@/server/auth/session` imports keep working.
  */
 
-export interface TrainerSession {
-  trainerId: string;
-}
-
-export interface CustomerSession {
-  customerId: string;
-  trainerId: string;
-}
-
-export const TRAINER_COOKIE = "trainer_session";
-export const CUSTOMER_COOKIE = "customer_session";
-
-const DEFAULT_EXPIRES_IN = "7d";
+export {
+  signSession,
+  verifySession,
+  TRAINER_COOKIE,
+  CUSTOMER_COOKIE,
+  type TrainerSession,
+  type CustomerSession,
+} from "@/server/auth/jwt";
 
 /** Read the JWT secret from the environment (route-handler side only). */
 function getSecret(): string {
@@ -33,37 +34,6 @@ function getSecret(): string {
     throw new AuthError("Server misconfiguration.", "AUTH_ERROR");
   }
   return secret;
-}
-
-/**
- * Sign a session JWT (HS256). Sets `iat` automatically and `exp` from
- * `opts.expiresIn` (default 7d).
- */
-export async function signSession(
-  payload: Record<string, unknown>,
-  secret: string,
-  opts?: { expiresIn?: string },
-): Promise<string> {
-  const key = new TextEncoder().encode(secret);
-  return new SignJWT(payload)
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(opts?.expiresIn ?? DEFAULT_EXPIRES_IN)
-    .sign(key);
-}
-
-/**
- * Verify a session JWT and return its payload cast to `T`. Throws on a tampered,
- * expired, or wrong-secret token (never returns null).
- */
-export async function verifySession<T>(token: string, secret: string): Promise<T> {
-  const key = new TextEncoder().encode(secret);
-  try {
-    const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
-    return payload as T;
-  } catch {
-    throw new AuthError("Invalid session.", "AUTH_ERROR");
-  }
 }
 
 /** Read + verify the trainer session cookie. Returns null if missing/invalid. */

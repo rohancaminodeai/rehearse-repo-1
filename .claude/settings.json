@@ -14,6 +14,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/post-change-review.sh\"",
+            "timeout": 30,
+            "statusMessage": "Checking for code changes to review"
+          }
+        ]
+      }
     ]
   }
 }
