@@ -111,6 +111,11 @@ export function getCookie(name: string): string | undefined {
   return cookieJar.get(name)?.value;
 }
 
+/** Read the options a handler passed when setting a cookie (httpOnly/secure/...). */
+export function getCookieOptions(name: string) {
+  return cookieJar.getOptions(name);
+}
+
 export type RouteHandler = (req: Request, ctx?: unknown) => Promise<Response> | Response;
 
 export interface CallOptions {

@@ -1,4 +1,4 @@
-import type { Customer, Trainer } from "@prisma/client";
+import { Prisma, type Customer, type Trainer } from "@prisma/client";
 
 import { prisma } from "@/server/data/prisma";
 import { AuthError, ConflictError } from "@/server/lib/errors";
@@ -33,14 +33,24 @@ export async function signupTrainer(input: {
     async (s) => !!(await prisma.trainer.findUnique({ where: { slug: s } })),
   );
 
-  return prisma.trainer.create({
-    data: {
-      email: input.email,
-      passwordHash,
-      name: input.name,
-      slug,
-    },
-  });
+  try {
+    return await prisma.trainer.create({
+      data: {
+        email: input.email,
+        passwordHash,
+        name: input.name,
+        slug,
+      },
+    });
+  } catch (err) {
+    // The findUnique checks above are best-effort; the unique constraints are
+    // the real guard. Translate a concurrent unique-violation (P2002) into a
+    // 409 ConflictError instead of letting it surface as an unhandled 500.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new ConflictError("An account with that email already exists.");
+    }
+    throw err;
+  }
 }
 
 /** Verify trainer credentials. Generic error on any failure (rules 5/6). */

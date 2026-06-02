@@ -5,27 +5,40 @@
  * Tests can seed an auth cookie before calling a handler and assert on cookies
  * the handler sets/clears.
  */
+export interface CookieOptions {
+  httpOnly?: boolean;
+  secure?: boolean;
+  sameSite?: "lax" | "strict" | "none" | boolean;
+  path?: string;
+  maxAge?: number;
+}
+
 export interface JarCookie {
   name: string;
   value: string;
 }
 
 class TestCookieJar {
-  private store = new Map<string, string>();
+  private store = new Map<string, { value: string; options: CookieOptions }>();
 
   get(name: string): JarCookie | undefined {
-    const value = this.store.get(name);
-    return value === undefined ? undefined : { name, value };
+    const entry = this.store.get(name);
+    return entry === undefined ? undefined : { name, value: entry.value };
   }
 
   getAll(): JarCookie[] {
-    return [...this.store.entries()].map(([name, value]) => ({ name, value }));
+    return [...this.store.entries()].map(([name, { value }]) => ({ name, value }));
   }
 
-  set(name: string, value: string): void {
-    // Mirrors the subset of next/headers cookie options our code passes; we only
-    // need name+value for assertions. maxAge:0 (clear) removes the entry.
-    this.store.set(name, value);
+  /** Options the handler passed when setting this cookie (for httpOnly/secure assertions). */
+  getOptions(name: string): CookieOptions | undefined {
+    return this.store.get(name)?.options;
+  }
+
+  set(name: string, value: string, options: CookieOptions = {}): void {
+    // Mirrors next/headers cookies().set(name, value, options). We retain the
+    // options so tests can assert httpOnly/secure (rule 6).
+    this.store.set(name, { value, options });
   }
 
   delete(name: string): void {

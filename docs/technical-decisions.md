@@ -47,6 +47,13 @@ real S3 later. DB stores object key + metadata. Images served only via an auth-c
 ## ADR-007 — Styling: Tailwind + shadcn/ui
 **Decision.** **Tailwind + shadcn/ui** (Dialog for preview modal, Button, Input, Table, Card, Toast,
 DropdownMenu). Components are copied into the repo (we own them). **Status: Decided.**
+**Amendment (Phase 2, 2026-06-02).** Pinned to **Tailwind v3**. The current `shadcn` CLI is v4 and
+targets Tailwind v4 (oklch tokens, `@base-ui/react`), which conflicts with our v3 stack. We therefore
+**hand-author** the `src/components/ui/*` primitives in Tailwind v3 (concrete navy/emerald colors) —
+still "owned in-repo" per the original decision — and keep only the lightweight runtime helpers
+`clsx` + `tailwind-merge` + `class-variance-authority` (`src/lib/utils.ts` `cn`). Interactive
+primitives needed later (Dialog/DropdownMenu/Toast/Table) will be added with Radix when those phases
+land. Revisit if/when we deliberately migrate to Tailwind v4.
 
 ## ADR-008 — Validation: Zod at the API boundary
 **Decision.** **Zod** validates every API input; schemas live in `src/server/api/_schemas` and the

@@ -36,6 +36,7 @@ import {
   createCustomer,
   clearAuth,
   getCookie,
+  getCookieOptions,
   callRoute,
 } from "../helpers";
 
@@ -77,6 +78,8 @@ describe("trainer signup", () => {
     expect(cookie).toBeTruthy();
     // A JWT has three dot-separated segments.
     expect((cookie ?? "").split(".")).toHaveLength(3);
+    // Session cookie must be httpOnly (rule 6).
+    expect(getCookieOptions(TRAINER_COOKIE)?.httpOnly).toBe(true);
 
     const row = await prisma.trainer.findUnique({ where: { email } });
     expect(row).not.toBeNull();

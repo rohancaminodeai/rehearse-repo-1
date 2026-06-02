@@ -21,10 +21,12 @@ describe("session sign/verify", () => {
 
   it("rejects a tampered token", async () => {
     const token = await signSession({ trainerId: "t1" }, SECRET);
-    // Mutate a character in the signature segment.
-    const lastChar = token.slice(-1);
-    const swapped = lastChar === "a" ? "b" : "a";
-    const tampered = token.slice(0, -1) + swapped;
+    // Mutate the PAYLOAD segment: any change to the signed content invalidates
+    // the HMAC deterministically. (Flipping the last signature char is flaky —
+    // its trailing base64url bits are padding, so it can still verify.)
+    const [header, payload, signature] = token.split(".");
+    const swapped = (payload[0] === "A" ? "B" : "A") + payload.slice(1);
+    const tampered = `${header}.${swapped}.${signature}`;
     await expect(verifySession<Payload>(tampered, SECRET)).rejects.toThrow();
   });
 
