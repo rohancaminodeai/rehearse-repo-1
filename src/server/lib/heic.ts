@@ -17,9 +17,11 @@ export function isHeic(input: { contentType?: string; filename?: string }): bool
 /** Convert a HEIC/HEIF buffer to JPEG. Throws ValidationError on failure (→ 400). */
 export async function heicToJpeg(buffer: Buffer): Promise<Buffer> {
   try {
-    const view = new Uint8Array(buffer);
+    // heic-convert / heic-decode require an iterable typed array at runtime
+    // (it spreads `buffer.slice(...)`); a raw ArrayBuffer throws. The published
+    // @types mistype this as ArrayBufferLike — corrected in src/types/heic-convert.d.ts.
     const output = await convert({
-      buffer: view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength),
+      buffer: new Uint8Array(buffer),
       format: "JPEG",
       quality: 0.9,
     });

@@ -71,6 +71,11 @@ against dedicated test Postgres + MinIO. **Status: Decided.**
 **Options.** Convert→JPEG · reject HEIC · store as-is (no preview).
 **Decision.** **Convert HEIC→JPEG server-side on upload** (`heic-convert`/`sharp`); store the JPEG so
 previews always render. Conversion failure → `400`, never a blank preview. **Status: Decided.**
+**Amendment (Phase 4).** `heic-convert` must be handed an *iterable typed array* (`Uint8Array`/`Buffer`)
+at runtime — a raw `ArrayBuffer` throws inside `heic-decode` (`Spread syntax requires ...iterable`).
+The published `@types/heic-convert` mistypes `buffer` as `ArrayBufferLike`; corrected locally in
+`src/types/heic-convert.d.ts` (a type-only fix, no new dependency, no `any`/cast). `heic.ts` now passes
+`new Uint8Array(buffer)`. Verified against a real `test/fixtures/sample.heic`.
 
 ## ADR-011 — Comment model: single trainer comment + one emoji reaction
 **Context.** The mockup shows a thread, but the MVP requirement is a trainer comment + customer
