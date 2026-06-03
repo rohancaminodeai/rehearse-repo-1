@@ -1,8 +1,14 @@
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-2 p-8">
-      <h1 className="text-2xl font-semibold">InBody Dashboard</h1>
-      <p className="text-sm text-gray-500">MVP scaffold — see /dashboard and /portal.</p>
-    </main>
-  );
+import { redirect } from "next/navigation";
+
+import { getTrainerSession } from "@/server/auth/session";
+
+/**
+ * Root entry point. Trainers are the only role that self-serves a login here
+ * (customers reach their portal via a per-slug link), so we route to the trainer
+ * surface: dashboard when signed in, login otherwise. No blank/scaffold landing
+ * (CLAUDE.md §16 — every screen is sensible).
+ */
+export default async function Home() {
+  const session = await getTrainerSession();
+  redirect(session ? "/dashboard" : "/login");
 }

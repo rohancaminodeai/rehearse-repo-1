@@ -13,11 +13,21 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
 import { GET as groupsGET, POST as groupsPOST } from "@/app/api/groups/route";
+import { POST as customersPOST } from "@/app/api/customers/route";
 import type { ApiError, CustomerDTO, GroupDTO } from "@/shared/types";
 
-import { createGroup, createTrainer, authAsTrainer, clearAuth, callRoute } from "../helpers";
+import {
+  createGroup,
+  createTrainer,
+  createCustomer,
+  authAsTrainer,
+  authAsCustomer,
+  clearAuth,
+  callRoute,
+} from "../helpers";
 
 const GROUPS_URL = "http://t.local/api/groups";
+const CUSTOMERS_URL = "http://t.local/api/customers";
 
 type GroupWithCustomersDTO = GroupDTO & { customers: CustomerDTO[] };
 interface GroupsListBody {
@@ -101,6 +111,46 @@ describe("unauthenticated group access", () => {
     const { status, body } = await callRoute<ApiError>(groupsGET, {
       method: "GET",
       url: GROUPS_URL,
+    });
+
+    expect(status).toBe(401);
+    expect(body.code).toBe("AUTH_ERROR");
+  });
+});
+
+describe("role separation — a customer cookie cannot act on trainer-only routes (rule 5)", () => {
+  // The reactions suite covers the forward direction (a trainer cookie on the
+  // customer-only reaction route → 401). These lock the symmetric direction:
+  // a valid CUSTOMER session must never satisfy a trainer-only route, even when
+  // that customer belongs to a real trainer.
+  it("rejects POST /api/groups (trainer-only) presented with a customer cookie → 401", async () => {
+    const trainer = await createTrainer();
+    const group = await createGroup(trainer.id);
+    const customer = await createCustomer(trainer.id, group.id);
+    clearAuth();
+    await authAsCustomer(customer.id, trainer.id);
+
+    const { status, body } = await callRoute<ApiError>(groupsPOST, {
+      method: "POST",
+      url: GROUPS_URL,
+      body: { name: "Should Not Exist" },
+    });
+
+    expect(status).toBe(401);
+    expect(body.code).toBe("AUTH_ERROR");
+  });
+
+  it("rejects POST /api/customers (trainer-only) presented with a customer cookie → 401", async () => {
+    const trainer = await createTrainer();
+    const group = await createGroup(trainer.id);
+    const customer = await createCustomer(trainer.id, group.id);
+    clearAuth();
+    await authAsCustomer(customer.id, trainer.id);
+
+    const { status, body } = await callRoute<ApiError>(customersPOST, {
+      method: "POST",
+      url: CUSTOMERS_URL,
+      body: { groupId: group.id, name: "Nope", password: "plain1234" },
     });
 
     expect(status).toBe(401);
