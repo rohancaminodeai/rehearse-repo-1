@@ -323,7 +323,18 @@ function EntryCard({
   const renderable = isRenderable(entry.contentType);
 
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card className="relative flex flex-col overflow-hidden">
+      {/* Customer's emoji reaction, read-only for the trainer (FR-14). */}
+      {entry.reaction ? (
+        <span
+          aria-label={`Customer reacted with ${entry.reaction.emoji}`}
+          title="Customer reaction"
+          className="absolute right-2 top-2 z-10 flex h-8 items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-2 text-base shadow-sm"
+        >
+          {entry.reaction.emoji}
+        </span>
+      ) : null}
+
       <button
         type="button"
         onClick={onPreview}
@@ -418,6 +429,14 @@ function PreviewDialog({
             ) : (
               <p className="text-sm italic text-slate-400">No comment</p>
             )}
+
+            {/* Customer's reaction, read-only for the trainer (FR-14). */}
+            {entry.reaction ? (
+              <p className="text-sm text-slate-600">
+                Customer reacted{" "}
+                <span className="text-base align-middle">{entry.reaction.emoji}</span>
+              </p>
+            ) : null}
 
             <DialogFooter>
               <DownloadLink href={`/api/inbody/${entry.id}/file?download=1`} />
