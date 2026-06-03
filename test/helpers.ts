@@ -10,6 +10,11 @@
  *   const res = await callRoute(POST, { method: "POST", url: "http://t/api/...", body });
  */
 import { PrismaClient } from "@prisma/client";
+import {
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 
 import { hashPassword } from "@/server/lib/password";
 import { normalizeName } from "@/server/lib/slug";
@@ -114,6 +119,48 @@ export function getCookie(name: string): string | undefined {
 /** Read the options a handler passed when setting a cookie (httpOnly/secure/...). */
 export function getCookieOptions(name: string) {
   return cookieJar.getOptions(name);
+}
+
+// --- MinIO / S3 test helpers (test bucket) ------------------------------------
+
+const s3 = new S3Client({
+  region: process.env.S3_REGION ?? "us-east-1",
+  endpoint: process.env.S3_ENDPOINT,
+  forcePathStyle: true,
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY ?? "",
+    secretAccessKey: process.env.S3_SECRET_KEY ?? "",
+  },
+});
+
+function testBucket(): string {
+  return process.env.S3_BUCKET ?? "inbody-test";
+}
+
+/** Put a small object directly into the test bucket. */
+export async function putTestObject(
+  key: string,
+  body: Buffer | string = "test",
+  contentType = "image/jpeg",
+): Promise<void> {
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: testBucket(),
+      Key: key,
+      Body: typeof body === "string" ? Buffer.from(body) : body,
+      ContentType: contentType,
+    }),
+  );
+}
+
+/** True if the object exists in the test bucket. */
+export async function testObjectExists(key: string): Promise<boolean> {
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: testBucket(), Key: key }));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export type RouteHandler = (req: Request, ctx?: unknown) => Promise<Response> | Response;

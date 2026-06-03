@@ -24,6 +24,12 @@ export default defineConfig({
           environment: "node",
           include: ["src/**/*.integration.test.ts", "test/**/*.test.ts"],
           setupFiles: ["./test/setup.ts"],
+          // Integration tests share ONE Postgres + MinIO bucket and TRUNCATE
+          // between tests. Run all integration files in a single fork so no two
+          // files race on the shared DB (one fork's afterEach truncate would
+          // otherwise wipe another fork's in-flight rows).
+          pool: "forks",
+          poolOptions: { forks: { singleFork: true } },
         },
       },
     ],
