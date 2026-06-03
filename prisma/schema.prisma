@@ -1,0 +1,73 @@
+// InBody Dashboard — Prisma schema (FROZEN after Phase 1).
+// Data model contract: docs/architecture.md §3.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Trainer {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  slug         String   @unique
+  createdAt    DateTime @default(now())
+
+  groups    Group[]
+  customers Customer[]
+}
+
+model Group {
+  id        String   @id @default(cuid())
+  trainerId String
+  name      String
+  note      String?
+  createdAt DateTime @default(now())
+
+  trainer   Trainer    @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  customers Customer[]
+}
+
+model Customer {
+  id             String   @id @default(cuid())
+  trainerId      String
+  groupId        String
+  name           String
+  nameNormalized String
+  passwordHash   String
+  createdAt      DateTime @default(now())
+
+  trainer Trainer       @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  group   Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  entries InbodyEntry[]
+
+  @@unique([trainerId, nameNormalized])
+}
+
+model InbodyEntry {
+  id               String   @id @default(cuid())
+  customerId       String
+  objectKey        String
+  originalFilename String
+  contentType      String
+  comment          String?  @db.Text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  customer Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reaction Reaction?
+}
+
+model Reaction {
+  id            String   @id @default(cuid())
+  inbodyEntryId String   @unique
+  emoji         String
+  createdAt     DateTime @default(now())
+
+  inbodyEntry InbodyEntry @relation(fields: [inbodyEntryId], references: [id], onDelete: Cascade)
+}
